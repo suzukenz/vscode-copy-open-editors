@@ -18,20 +18,39 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         // 相対パスに変換
-        const editorItems: vscode.QuickPickItem[] = tabs
+        const pathMap = new Map<string, vscode.TabInputText[]>();
+
+        // 同じ相対パスを持つファイルをグループ化
+        tabs
           .filter((tab) => tab.input instanceof vscode.TabInputText)
-          .map((tab) => {
+          .forEach((tab) => {
             const input = tab.input as vscode.TabInputText;
             const filePath = input.uri.fsPath;
-            const document = vscode.workspace.textDocuments.find(
-              (doc) => doc.uri.toString() === input.uri.toString()
-            );
-            const languageId = document?.languageId || "unknown";
             const relativePath = getRelativePath(filePath);
-
+            
+            if (!pathMap.has(relativePath)) {
+              pathMap.set(relativePath, []);
+            }
+            pathMap.get(relativePath)?.push(input);
+          });
+          
+        // QuickPickItem に変換
+        const editorItems: vscode.QuickPickItem[] = Array.from(pathMap.entries())
+          .map(([relativePath, inputs]) => {
+            // 同じパスのファイルが複数ある場合は詳細情報にファイル数を表示
+            const document = inputs.length > 0 
+              ? vscode.workspace.textDocuments.find(
+                  (doc) => doc.uri.toString() === inputs[0].uri.toString()
+                )
+              : undefined;
+            const languageId = document?.languageId || "unknown";
+            const description = inputs.length > 1 
+              ? `${languageId} (${inputs.length} files)`
+              : languageId;
+            
             return {
               label: relativePath,
-              description: languageId,
+              description: description,
               picked: true,
             };
           });

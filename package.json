@@ -3,7 +3,7 @@
   "displayName": "Copy Open Editors",
   "publisher": "suzukenz",
   "description": "Quickly copy open tab file paths to clipboard",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "icon": "images/icon_128x128.png",
   "repository": {
     "type": "git",

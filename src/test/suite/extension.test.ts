@@ -86,4 +86,39 @@ suite("OpenEditors QuickCopy", () => {
     assert.ok(warnStub.calledOnceWith("No open tabs to copy."));
     assert.strictEqual(await vscode.env.clipboard.readText(), "initial");
   });
+
+  test("同じ相対パスを持つファイルがグループ化される", async () => {
+    // 同じファイルを2回開いてタブが2つできるようにする
+    const fooUri = vscode.Uri.file(path.join(workspace, "foo.ts"));
+    await vscode.workspace.openTextDocument(fooUri);
+    await vscode.window.showTextDocument(fooUri, {
+      preview: false,
+      viewColumn: vscode.ViewColumn.One,
+    });
+    await vscode.window.showTextDocument(fooUri, {
+      preview: false,
+      viewColumn: vscode.ViewColumn.Two,
+    });
+
+    // 別のファイルも開く
+    const barUri = vscode.Uri.file(path.join(workspace, "bar.js"));
+    await vscode.workspace.openTextDocument(barUri);
+    await vscode.window.showTextDocument(barUri, { preview: false });
+
+    // コマンド実行
+    await vscode.commands.executeCommand("copyOpenEditors.copy");
+
+    // 確認：QuickPickのitemsには2種類のアイテムしかないはず
+    assert.strictEqual(fakeQuickPick.items.length, 2);
+
+    // 確認：「foo.ts」はファイル数の情報を含む description になっている
+    const fooItem = fakeQuickPick.items.find((item) => item.label === "foo.ts");
+    assert.ok(fooItem);
+    assert.ok(fooItem.description?.includes("2 files"));
+
+    // 確認：「bar.js」は通常の description
+    const barItem = fakeQuickPick.items.find((item) => item.label === "bar.js");
+    assert.ok(barItem);
+    assert.ok(!barItem.description?.includes("files"));
+  });
 });
